@@ -44,6 +44,13 @@ def register_hub_commands(
             )
         return {"source": source, "target": target}
 
+    def _parse_env_map_ref(value: str) -> tuple[str, str]:
+        key, sep, raw_value = value.partition("=")
+        key = key.strip()
+        if sep != "=" or not key:
+            raise_exit(f"Invalid --env-map value: {value!r}. Expected format KEY=VALUE")
+        return key, raw_value
+
     @destination_app.command("show")
     def hub_destination_show(
         repo_id: str = typer.Argument(..., help="Repo id from hub manifest"),
@@ -92,7 +99,12 @@ def register_hub_commands(
         repo_id: str = typer.Argument(..., help="Repo id from hub manifest"),
         kind: str = typer.Argument(..., help="Destination kind (local|docker)"),
         image: Optional[str] = typer.Option(
-            None, "--image", help="Docker image (required for docker kind)"
+            None,
+            "--image",
+            help=(
+                "Docker image ref (required for docker kind; supports custom images "
+                "like ghcr.io/org/dev-image:tag)"
+            ),
         ),
         name: Optional[str] = typer.Option(
             None, "--name", help="Docker container name override"
@@ -102,16 +114,44 @@ def register_hub_commands(
             "--env",
             help="Repeat to add env passthrough patterns (example: CAR_*)",
         ),
+        env_map: Optional[list[str]] = typer.Option(
+            None,
+            "--env-map",
+            help="Repeat explicit docker env entries using KEY=VALUE format",
+        ),
         mount: Optional[list[str]] = typer.Option(
             None,
             "--mount",
             help="Repeat bind mount entries using source:target format",
+        ),
+        mount_ro: Optional[list[str]] = typer.Option(
+            None,
+            "--mount-ro",
+            help="Repeat read-only bind mount entries using source:target format",
+        ),
+        profile: Optional[str] = typer.Option(
+            None,
+            "--profile",
+            help="Docker runtime profile (currently supported: full-dev)",
+        ),
+        workdir: Optional[str] = typer.Option(
+            None, "--workdir", help="Docker workdir override inside the container"
         ),
         path: Optional[Path] = typer.Option(None, "--path", help="Hub root path"),
         output_json: bool = typer.Option(
             False, "--json", help="Emit JSON payload for scripting"
         ),
     ):
+        """Set repo execution destination.
+
+        Examples:
+        - Bring your own image:
+          `car hub destination set <repo_id> docker --image ghcr.io/org/dev-image:tag --path <hub_root>`
+        - Inspect advanced runtime flags:
+          `car hub destination set --help`
+        - Deep docs:
+          `docs/configuration/destinations.md`
+        """
         config = require_hub_config(path)
         manifest, repos_by_id, repo = _resolve_repo_entry(config, repo_id)
 
@@ -128,9 +168,28 @@ def register_hub_commands(
             env_passthrough = [item.strip() for item in (env or []) if item.strip()]
             if env_passthrough:
                 destination["env_passthrough"] = env_passthrough
-            mounts = [_parse_mount_ref(item) for item in (mount or [])]
+            explicit_env: dict[str, str] = {}
+            for entry in env_map or []:
+                env_key, env_value = _parse_env_map_ref(entry)
+                explicit_env[env_key] = env_value
+            if explicit_env:
+                destination["env"] = explicit_env
+            mounts: list[dict[str, Any]] = [
+                _parse_mount_ref(item) for item in (mount or [])
+            ]
+            mounts.extend(
+                {
+                    **_parse_mount_ref(item),
+                    "read_only": True,
+                }
+                for item in (mount_ro or [])
+            )
             if mounts:
                 destination["mounts"] = mounts
+            if isinstance(profile, str) and profile.strip():
+                destination["profile"] = profile.strip()
+            if isinstance(workdir, str) and workdir.strip():
+                destination["workdir"] = workdir.strip()
         else:
             raise_exit(
                 f"Unsupported destination kind: {kind!r}. Use 'local' or 'docker'."

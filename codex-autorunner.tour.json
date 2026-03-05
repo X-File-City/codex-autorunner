@@ -1,21 +1,15 @@
 {
   "id": "codex-autorunner-onboarding",
   "title": "CAR (codex-autorunner) Architecture Tour",
-  "description": "A guided walkthrough of CAR's architecture: the agent coordination hub that drives coding agents via markdown tickets as the control plane.",
-  "version": "1.0.0",
+  "description": "A guided walkthrough of CAR, the agent coordination hub that drives coding agents via markdown tickets as the control plane.",
+  "version": "1.1.0",
   "steps": [
     {
       "id": "overview",
       "title": "Welcome to CAR",
-      "description": "CAR is a meta-harness for coding agents. It coordinates agents like Codex and OpenCode using markdown tickets as the control plane. The codebase is a Python project with a FastAPI web server, CLI, and chat platform integrations (Telegram, Discord). Key entry points: the `car` CLI shim, `src/codex_autorunner/` for all source code, `docs/` for architecture docs, and `tests/` for the extensive test suite.",
-      "colorMode": "fileTypes"
-    },
-    {
-      "id": "entry-points",
-      "title": "CLI & Server Entry Points",
-      "description": "CAR has two main entry points. The `cli.py` module (Typer-based) exposes commands like init, run, once, status, log, edit, doctor, and snapshot. The `server.py` module launches the FastAPI web server that powers the Web UI and API. The `car` script at the repo root is a shim that bootstraps the environment and delegates to the CLI.",
-      "focusDirectory": "src/codex_autorunner",
+      "description": "CAR is a meta-harness for coding agents. It coordinates agents like Codex and OpenCode using markdown tickets as the control plane. The CLI (cli.py) and web server (server.py) are the two main entry points. The car script at the repo root bootstraps the environment.",
       "colorMode": "fileTypes",
+      "focusDirectory": "",
       "highlightLayers": [
         {
           "id": "entry-files",
@@ -24,9 +18,7 @@
           "items": [
             { "path": "car", "type": "file" },
             { "path": "src/codex_autorunner/cli.py", "type": "file" },
-            { "path": "src/codex_autorunner/server.py", "type": "file" },
-            { "path": "src/codex_autorunner/api.py", "type": "file" },
-            { "path": "src/codex_autorunner/__main__.py", "type": "file" }
+            { "path": "src/codex_autorunner/server.py", "type": "file" }
           ],
           "opacity": 0.8,
           "renderStrategy": "border"
@@ -36,41 +28,30 @@
     {
       "id": "core-engine",
       "title": "Core Engine",
-      "description": "The heart of CAR. This protocol-agnostic control layer manages config, state (SQLite), runner lifecycle, prompt building, locks, stop rules, and git integration. Key modules: `config.py` for layered config resolution, `state.py` and `runner_state.py` for state management, `runner_controller.py` and `runner_process.py` for the autorunner loop, `prompt.py` for prompt construction, and `hub.py` for multi-repo supervision.",
+      "description": "The protocol-agnostic control layer that manages config, state (SQLite), the runner loop, prompt building, locks, and stop rules. The hub module supervises multiple repos and worktrees. The PMA (Project Manager Agent) subsystem handles conversational project management with its own queue, dispatch, lifecycle, and safety modules.",
       "focusDirectory": "src/codex_autorunner/core",
       "colorMode": "fileTypes",
       "highlightLayers": [
         {
-          "id": "core-state",
-          "name": "Config & State",
-          "color": "#3b82f6",
-          "items": [
-            { "path": "src/codex_autorunner/core/config.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/state.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/runner_state.py", "type": "file" }
-          ],
-          "opacity": 0.7,
-          "renderStrategy": "border"
-        },
-        {
           "id": "core-runner",
-          "name": "Runner Loop",
+          "name": "Runner & State",
           "color": "#ef4444",
           "items": [
             { "path": "src/codex_autorunner/core/runner_controller.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/runner_process.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/prompt.py", "type": "file" }
+            { "path": "src/codex_autorunner/core/state.py", "type": "file" },
+            { "path": "src/codex_autorunner/core/config.py", "type": "file" }
           ],
           "opacity": 0.7,
           "renderStrategy": "border"
         },
         {
           "id": "core-hub",
-          "name": "Hub Supervision",
+          "name": "Hub & PMA",
           "color": "#8b5cf6",
           "items": [
             { "path": "src/codex_autorunner/core/hub.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/hub_lifecycle.py", "type": "file" }
+            { "path": "src/codex_autorunner/core/pma_queue.py", "type": "file" },
+            { "path": "src/codex_autorunner/core/pma_lifecycle.py", "type": "file" }
           ],
           "opacity": 0.7,
           "renderStrategy": "border"
@@ -78,9 +59,9 @@
       ]
     },
     {
-      "id": "tickets-control-plane",
+      "id": "tickets",
       "title": "Tickets: The Control Plane",
-      "description": "Tickets are markdown files with frontmatter that serve as CAR's control plane. The `tickets/` package handles parsing frontmatter, managing ticket state, linting, bulk operations, spec ingestion, and the ticket runner that picks the next incomplete ticket. Agents read and write tickets to coordinate work. This is the philosophical core of CAR: tickets as code.",
+      "description": "Tickets are markdown files with frontmatter that drive the entire system. This package handles parsing, state management, linting, bulk operations, and the ticket runner that picks the next incomplete ticket. Agents read and write tickets to coordinate work. Tickets are code.",
       "focusDirectory": "src/codex_autorunner/tickets",
       "colorMode": "fileTypes",
       "highlightLayers": [
@@ -91,9 +72,7 @@
           "items": [
             { "path": "src/codex_autorunner/tickets/runner.py", "type": "file" },
             { "path": "src/codex_autorunner/tickets/models.py", "type": "file" },
-            { "path": "src/codex_autorunner/tickets/frontmatter.py", "type": "file" },
-            { "path": "src/codex_autorunner/tickets/files.py", "type": "file" },
-            { "path": "src/codex_autorunner/tickets/lint.py", "type": "file" }
+            { "path": "src/codex_autorunner/tickets/frontmatter.py", "type": "file" }
           ],
           "opacity": 0.8,
           "renderStrategy": "border"
@@ -101,55 +80,18 @@
       ]
     },
     {
-      "id": "pma-system",
-      "title": "Project Manager Agent (PMA)",
-      "description": "The PMA is a conversational agent that manages CAR on behalf of the user. It can create tickets, set up repos, manage worktrees, and respond to dispatches from running agents. The PMA subsystem in `core/` includes queue management, dispatch interception, lifecycle control, safety guardrails, state persistence, and a memory system for learning user preferences.",
-      "focusDirectory": "src/codex_autorunner/core",
-      "colorMode": "fileTypes",
-      "highlightLayers": [
-        {
-          "id": "pma-modules",
-          "name": "PMA System",
-          "color": "#ec4899",
-          "items": [
-            { "path": "src/codex_autorunner/core/pma_context.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/pma_queue.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/pma_dispatches.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/pma_lane_worker.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/pma_lifecycle.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/pma_safety.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/pma_state.py", "type": "file" },
-            { "path": "src/codex_autorunner/core/pma_dispatch_interceptor.py", "type": "file" }
-          ],
-          "opacity": 0.8,
-          "renderStrategy": "border"
-        }
-      ]
-    },
-    {
-      "id": "agent-adapters",
+      "id": "agents",
       "title": "Agent Adapters",
-      "description": "CAR supports multiple coding agents through a clean adapter pattern. `agents/base.py` defines the base interface. Each agent (Codex, OpenCode) has its own package with a harness module that implements the agent lifecycle. The `integrations/agents/` layer handles backend orchestration, agent pools, and runtime wiring. This separation keeps the engine vendor-neutral.",
+      "description": "CAR supports multiple coding agents through a clean adapter pattern. base.py defines the interface, and each agent (Codex, OpenCode) has its own package with a harness that implements the agent lifecycle. The integrations/agents layer handles backend orchestration and runtime wiring, keeping the engine vendor-neutral.",
       "focusDirectory": "src/codex_autorunner/agents",
       "colorMode": "fileTypes",
       "highlightLayers": [
         {
           "id": "agent-base",
-          "name": "Agent Interface",
+          "name": "Interface & Implementations",
           "color": "#06b6d4",
           "items": [
             { "path": "src/codex_autorunner/agents/base.py", "type": "file" },
-            { "path": "src/codex_autorunner/agents/registry.py", "type": "file" },
-            { "path": "src/codex_autorunner/agents/types.py", "type": "file" }
-          ],
-          "opacity": 0.7,
-          "renderStrategy": "border"
-        },
-        {
-          "id": "agent-impls",
-          "name": "Agent Implementations",
-          "color": "#f97316",
-          "items": [
             { "path": "src/codex_autorunner/agents/codex", "type": "directory" },
             { "path": "src/codex_autorunner/agents/opencode", "type": "directory" }
           ],
@@ -160,26 +102,17 @@
     },
     {
       "id": "integrations",
-      "title": "Platform Integrations",
-      "description": "CAR integrates with multiple platforms for interaction. The `chat/` package provides a platform-agnostic chat abstraction. `telegram/` and `discord/` implement platform-specific adapters, command registries, and rendering. `github/` handles issue-to-spec ingestion and PR sync. `docker/` manages container-based execution destinations. `app_server/` bridges to the Codex app-server runtime.",
+      "title": "Integrations & Surfaces",
+      "description": "Platform integrations for user interaction. The chat package provides a platform-agnostic abstraction implemented by Telegram and Discord adapters. GitHub handles issue-to-spec ingestion and PR sync. Docker manages container-based execution. The web package powers the FastAPI UI with PTY terminal sessions, and the voice package provides Whisper-based transcription.",
       "focusDirectory": "src/codex_autorunner/integrations",
       "colorMode": "fileTypes",
       "highlightLayers": [
         {
-          "id": "chat-layer",
-          "name": "Chat Abstraction",
-          "color": "#3b82f6",
-          "items": [
-            { "path": "src/codex_autorunner/integrations/chat", "type": "directory" }
-          ],
-          "opacity": 0.7,
-          "renderStrategy": "border"
-        },
-        {
-          "id": "platforms",
+          "id": "chat-platforms",
           "name": "Chat Platforms",
           "color": "#8b5cf6",
           "items": [
+            { "path": "src/codex_autorunner/integrations/chat", "type": "directory" },
             { "path": "src/codex_autorunner/integrations/telegram", "type": "directory" },
             { "path": "src/codex_autorunner/integrations/discord", "type": "directory" }
           ],
@@ -192,58 +125,7 @@
           "color": "#10b981",
           "items": [
             { "path": "src/codex_autorunner/integrations/github", "type": "directory" },
-            { "path": "src/codex_autorunner/integrations/docker", "type": "directory" },
-            { "path": "src/codex_autorunner/integrations/app_server", "type": "directory" }
-          ],
-          "opacity": 0.7,
-          "renderStrategy": "border"
-        }
-      ]
-    },
-    {
-      "id": "web-and-voice",
-      "title": "Web UI & Voice",
-      "description": "The `web/` package powers the main control plane UI with FastAPI. It includes PTY terminal sessions for interactive agent TUIs, runner management, hub job scheduling, and static asset serving. The `voice/` package provides Whisper-based voice transcription with pluggable providers (local Whisper or OpenAI API), useful for mobile interaction via the web UI.",
-      "focusDirectory": "src/codex_autorunner",
-      "colorMode": "fileTypes",
-      "highlightLayers": [
-        {
-          "id": "web-layer",
-          "name": "Web Server & UI",
-          "color": "#f59e0b",
-          "items": [
-            { "path": "src/codex_autorunner/web", "type": "directory" }
-          ],
-          "opacity": 0.8,
-          "renderStrategy": "border"
-        },
-        {
-          "id": "voice-layer",
-          "name": "Voice / Whisper",
-          "color": "#a855f7",
-          "items": [
-            { "path": "src/codex_autorunner/voice", "type": "directory" }
-          ],
-          "opacity": 0.8,
-          "renderStrategy": "border"
-        }
-      ]
-    },
-    {
-      "id": "config-and-docs",
-      "title": "Configuration & Documentation",
-      "description": "CAR uses a layered config system: built-in defaults, `codex-autorunner.yml` (committed), `codex-autorunner.override.yml` (local), `.codex-autorunner/config.yml` (generated), and environment variables. The `docs/` directory contains the codebase constitution, architecture map, engineering standards, setup guides, and configuration references. The `docs/car_constitution/` subdirectory defines the project's architectural invariants.",
-      "focusDirectory": "docs",
-      "colorMode": "fileTypes",
-      "highlightLayers": [
-        {
-          "id": "config-files",
-          "name": "Configuration",
-          "color": "#ef4444",
-          "items": [
-            { "path": "codex-autorunner.yml", "type": "file" },
-            { "path": "pyproject.toml", "type": "file" },
-            { "path": "package.json", "type": "file" }
+            { "path": "src/codex_autorunner/integrations/docker", "type": "directory" }
           ],
           "opacity": 0.7,
           "renderStrategy": "border"
@@ -253,7 +135,7 @@
     {
       "id": "full-picture",
       "title": "The Full Picture",
-      "description": "CAR's architecture follows a clean layered design: the protocol-agnostic core engine at the center, agent adapters and ticket management as the execution layer, platform integrations and surfaces for user interaction, and a web UI + CLI as the primary control planes. Transport and vendor-specific logic lives in adapters, preserving the one-way dependency rule. The filesystem is the first-class data plane, tickets are code, and agents are the execution layer.",
+      "description": "CAR follows a clean layered design: the protocol-agnostic core engine at the center, agent adapters and ticket management as the execution layer, platform integrations for user interaction, and a web UI plus CLI as the primary control planes. The filesystem is the first-class data plane, tickets are code, and agents are the execution layer.",
       "focusDirectory": "",
       "colorMode": "fileTypes"
     }
